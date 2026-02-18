@@ -1,11 +1,12 @@
-﻿using AirlineSystem.AirlineSystem.Application.Services;
+﻿using AirlineSystem.AirlineSystem.Application.Interfaces;
+using AirlineSystem.AirlineSystem.Application.Services;
 using AirlineSystem.AirlineSystem.Domain.Enums;
 using AirlineSystem.AirlineSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirlineSystem.Application.Services
 {
-    internal class SearchService
+    internal class SearchService: ISearchService
     {
         private AirlineDbContext DC = new AirlineDbContext();
         private AuthService AuthService = new AuthService();

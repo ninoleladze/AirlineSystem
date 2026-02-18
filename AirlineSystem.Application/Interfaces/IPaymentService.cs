@@ -6,12 +6,11 @@ using System.Threading.Tasks;
 
 namespace AirlineSystem.AirlineSystem.Application.Interfaces
 {
-    internal interface IBookingService
+    internal interface IPaymentService
     {
+        public void PayForTicket();
+        public void RefundPayment();
+        public void ViewMyPayments();
 
-        public void BookTicket();
-        public void CancelTicket();
-        public void ShowMyTickets();
-        public void SearchByReference();
     }
 }

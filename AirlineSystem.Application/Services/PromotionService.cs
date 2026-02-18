@@ -1,11 +1,12 @@
-﻿using AirlineSystem.AirlineSystem.Application.Services;
+﻿using AirlineSystem.AirlineSystem.Application.Interfaces;
+using AirlineSystem.AirlineSystem.Application.Services;
 using AirlineSystem.AirlineSystem.Domain.Entities;
 using AirlineSystem.AirlineSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirlineSystem.Application.Services
 {
-    internal class PromotionService
+    internal class PromotionService : IPromotionService
     {
         private AirlineDbContext DC = new AirlineDbContext();
         private AuthService AuthService = new AuthService();

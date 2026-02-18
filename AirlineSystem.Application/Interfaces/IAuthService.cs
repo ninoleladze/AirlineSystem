@@ -8,5 +8,10 @@ namespace AirlineSystem.AirlineSystem.Application.Interfaces
 {
     internal interface IAuthService
     {
+        public void Register();
+        public void Login();
+        public void Logout();
+        public void CheckLoggedIn();
+        public void CheckAdmin();
     }
 }

@@ -1,12 +1,14 @@
-﻿using AirlineSystem.AirlineSystem.Application.Services;
+﻿using AirlineSystem.AirlineSystem.Application.Interfaces;
+using AirlineSystem.AirlineSystem.Application.Services;
 using AirlineSystem.AirlineSystem.Domain.Entities;
 using AirlineSystem.AirlineSystem.Domain.Enums;
 using AirlineSystem.AirlineSystem.Infrastructure.Persistence;
+using AirlineSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirlineSystem.Application.Services
 {
-    internal class CrewService
+    internal class CrewService : ICrewService
     {
         private AirlineDbContext DC = new AirlineDbContext();
         private AuthService AuthService = new AuthService();
@@ -40,7 +42,8 @@ namespace AirlineSystem.Application.Services
                 Name = name,
                 LicenseNumber = license,
                 Role = (CrewRole)roleInput,
-                UserId = userId != 0 ? userId : 1
+                UserId = userId != 0 ? userId : 1,
+                IsAvailable = true 
             });
             DC.SaveChanges();
             Console.ForegroundColor = ConsoleColor.Green;
@@ -62,12 +65,12 @@ namespace AirlineSystem.Application.Services
             GetAllCrewMembers();
             Console.WriteLine("Enter crew member ID:");
             int crewId = int.Parse(Console.ReadLine()!);
-            var crew = DC.CrewMembers.Find(crewId);
+
+            var crew = DC.CrewMembers.Include(c => c.User).FirstOrDefault(c => c.Id == crewId);
             if (crew == null) throw new Exception("Crew member not found.");
             if (DC.FlightAssignments.Any(fa => fa.FlightId == flightId && fa.CrewMemberId == crewId))
                 throw new Exception("Crew member already assigned to this flight.");
 
-            // Enforce 10-hour rest period
             var lastFlight = DC.FlightAssignments
                 .Include(fa => fa.Flight)
                 .Where(fa => fa.CrewMemberId == crewId)
@@ -95,12 +98,14 @@ namespace AirlineSystem.Application.Services
                 DutyHours = dutyHours,
                 Notes = string.IsNullOrWhiteSpace(notes) ? null : notes
             });
+
+            crew.IsAvailable = false;
             DC.SaveChanges();
+
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Crew member assigned successfully.");
+            Console.WriteLine($"Crew member {crew.Name} (User: {crew.User.Username}) assigned successfully and marked as unavailable.");
             Console.ResetColor();
         }
-
         public void RemoveCrewFromFlight()
         {
             AuthService.CheckAdmin();
@@ -116,19 +121,38 @@ namespace AirlineSystem.Application.Services
             Console.WriteLine("Enter assignment ID to remove:");
             int assignmentId = int.Parse(Console.ReadLine()!);
             var assignment = DC.FlightAssignments
+                .Include(fa => fa.CrewMember)
                 .FirstOrDefault(fa => fa.Id == assignmentId && fa.FlightId == flightId);
             if (assignment == null) throw new Exception("Assignment not found for that flight.");
+
+            var crew = assignment.CrewMember;
             DC.FlightAssignments.Remove(assignment);
+
+         
+            var hasOtherAssignments = DC.FlightAssignments
+                .Include(fa => fa.Flight)
+                .Any(fa => fa.CrewMemberId == crew.Id &&
+                           fa.FlightId != flightId &&
+                           (fa.Flight.Status == FlightStatus.Scheduled ||
+                            fa.Flight.Status == FlightStatus.Boarding));
+
+            if (!hasOtherAssignments)
+            {
+                crew.IsAvailable = true;
+            }
+
             DC.SaveChanges();
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Crew removed from flight successfully.");
+            Console.WriteLine(hasOtherAssignments
+                ? "Crew removed from flight (still assigned to other flights)."
+                : "Crew removed from flight and marked as available.");
             Console.ResetColor();
         }
 
         public void GetAllCrewMembers()
         {
             AuthService.CheckLoggedIn();
-            var list = DC.CrewMembers.ToList();
+            var list = DC.CrewMembers.Include(c => c.User).ToList();  
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("=== Crew Members ===");
             foreach (var c in list) Console.WriteLine(c);

@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace AirlineSystem.AirlineSystem.Application.Interfaces
 {
-    internal interface IBookingService
+    internal interface IPromotionService
     {
+        public void CreatePromotion();
+        public void ApplyPromoToTicket();
+        public void ListPromotions();
+        public void DeactivatePromotion();
 
-        public void BookTicket();
-        public void CancelTicket();
-        public void ShowMyTickets();
-        public void SearchByReference();
     }
 }

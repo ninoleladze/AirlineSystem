@@ -14,7 +14,7 @@ namespace AirlineSystem.Infrastructure.Seed
         {
             if (DC.Aircrafts.Any()) return;
 
-            // ── Aircrafts ────────────────────────────────────────────────────
+           
             var a1 = new Aircraft
             {
                 Model = "Boeing 737",
@@ -41,7 +41,6 @@ namespace AirlineSystem.Infrastructure.Seed
             };
             DC.Aircrafts.AddRange(a1, a2, a3);
 
-            // ── Flights ──────────────────────────────────────────────────────
             var f1 = new Flight
             {
                 FlightNumber = "TK-001",
@@ -125,7 +124,6 @@ namespace AirlineSystem.Infrastructure.Seed
             DC.Flights.AddRange(f1, f2, f3, f4, f5);
             DC.SaveChanges();
 
-            // ── Seed a sample promotion ──────────────────────────────────────
             if (!DC.Promotions.Any())
             {
                 DC.Promotions.Add(new Promotion

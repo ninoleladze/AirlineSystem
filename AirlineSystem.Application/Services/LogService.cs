@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AirlineSystem.AirlineSystem.Application.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,8 +7,10 @@ using System.Threading.Tasks;
 
 namespace AirlineSystem.AirlineSystem.Application.Services
 {
-    internal static class LogService
+    internal static class LogService 
     {
+       
+
         private static readonly string LogPath =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "airline.log");
 
@@ -25,6 +28,8 @@ namespace AirlineSystem.AirlineSystem.Application.Services
 
         public static void ViewLogs(int lines = 30)
         {
+            new AuthService().CheckAdmin();
+
             if (!File.Exists(LogPath))
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
@@ -47,7 +52,8 @@ namespace AirlineSystem.AirlineSystem.Application.Services
 
         public static void ClearLogs()
         {
-            if(File.Exists(LogPath)) File.Delete(LogPath);
+            new AuthService().CheckAdmin();
+            if (File.Exists(LogPath)) File.Delete(LogPath);
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Logs cleared.");
             Console.ResetColor();

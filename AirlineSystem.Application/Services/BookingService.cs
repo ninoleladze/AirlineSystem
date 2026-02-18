@@ -1,4 +1,5 @@
-﻿using AirlineSystem.AirlineSystem.Application.Services;
+﻿using AirlineSystem.AirlineSystem.Application.Interfaces;
+using AirlineSystem.AirlineSystem.Application.Services;
 using AirlineSystem.AirlineSystem.Domain.Entities;
 using AirlineSystem.AirlineSystem.Domain.Enums;
 using AirlineSystem.AirlineSystem.Domain.Events;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirlineSystem.Application.Services
 {
-    internal class BookingService
+    internal class BookingService : IBookingService
     {
         private AirlineDbContext DC = new AirlineDbContext();
         private AuthService AuthService = new AuthService();
@@ -27,6 +28,12 @@ namespace AirlineSystem.Application.Services
                 throw new Exception("Booking not available for this flight status.");
             if (flight.AvailableSeats <= 0) throw new Exception("No seats available on this flight.");
 
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"╔═══════════════════════════════════════════╗");
+            Console.WriteLine($"║  TICKET PRICE: {flight.BasePrice} {flight.PriceCurrency,-27}║");
+            Console.WriteLine($"╚═══════════════════════════════════════════╝");
+            Console.ForegroundColor = ConsoleColor.Magenta;
+
             Console.WriteLine("Passenger Name:");
             string passengerName = Console.ReadLine()!;
             if (string.IsNullOrWhiteSpace(passengerName)) throw new Exception("Passenger name cannot be empty.");
@@ -36,9 +43,6 @@ namespace AirlineSystem.Application.Services
             if (string.IsNullOrWhiteSpace(seatNumber)) throw new Exception("Seat number cannot be empty.");
             if (DC.Tickets.Any(t => t.FlightId == flightId && t.SeatNumber == seatNumber && !t.IsCanceled))
                 throw new Exception($"Seat {seatNumber} is already taken.");
-
-            // ← REMOVE THE PRICE PROMPT, USE FLIGHT PRICE INSTEAD
-            Console.WriteLine($"Ticket Price: {flight.BasePrice} {flight.PriceCurrency}");
             Console.ResetColor();
 
             string bookingRef = $"BK-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString()[..6].ToUpper()}";
@@ -50,8 +54,8 @@ namespace AirlineSystem.Application.Services
                 PassengerName = passengerName,
                 FlightId = flightId,
                 UserId = AuthService.LoggedInUser!.Id,
-                PriceAmount = flight.BasePrice,      // ← USE FLIGHT PRICE
-                PriceCurrency = flight.PriceCurrency   // ← USE FLIGHT CURRENCY
+                PriceAmount = flight.BasePrice,      
+                PriceCurrency = flight.PriceCurrency
             };
             flight.AvailableSeats--;
             DC.Tickets.Add(ticket);
@@ -60,9 +64,14 @@ namespace AirlineSystem.Application.Services
             {
                 DC.SaveChanges();
                 var evt = new TicketBookedEvent(ticket.Id, flightId, passengerName);
-                LogService.LogInfo($"Ticket booked: {bookingRef} | Flight: {flightId}");
+                LogService.LogInfo($"Ticket booked: {bookingRef} | Flight: {flightId} | Price: {ticket.PriceAmount}");
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Ticket booked! Reference: {bookingRef} | Seat: {seatNumber} | Price: {ticket.PriceAmount} {ticket.PriceCurrency}");
+                Console.WriteLine($"╔═══════════════════════════════════════════════════════╗");
+                Console.WriteLine($"║  TICKET BOOKED SUCCESSFULLY!                        ║");
+                Console.WriteLine($"║  Reference: {bookingRef,-38}║");
+                Console.WriteLine($"║  Seat: {seatNumber,-45}║");
+                Console.WriteLine($"║  Price: {ticket.PriceAmount} {ticket.PriceCurrency,-40}║");
+                Console.WriteLine($"╚═══════════════════════════════════════════════════════╝");
                 Console.ResetColor();
             }
             catch (DbUpdateConcurrencyException)
@@ -100,8 +109,21 @@ namespace AirlineSystem.Application.Services
                 .Where(t => t.UserId == AuthService.LoggedInUser!.Id).ToList();
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("=== My Tickets ===");
-            if (tickets.Count == 0) { Console.WriteLine("You have no tickets."); Console.ResetColor(); return; }
-            foreach (var t in tickets) Console.WriteLine($"{t} | Flight: {t.Flight?.FlightNumber}");
+            if (tickets.Count == 0)
+            {
+                Console.WriteLine("You have no tickets.");
+                Console.ResetColor();
+                return;
+            }
+            Console.WriteLine(new string('-', 100));
+            foreach (var t in tickets)
+            {
+                Console.WriteLine(t);
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"   Flight: {t.Flight?.FlightNumber} | {t.Flight?.DepartureAirport} → {t.Flight?.ArrivalAirport}");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+            }
+            Console.WriteLine(new string('-', 100));
             Console.ResetColor();
         }
 

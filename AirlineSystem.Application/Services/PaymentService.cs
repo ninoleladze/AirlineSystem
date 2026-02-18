@@ -1,4 +1,5 @@
-﻿using AirlineSystem.AirlineSystem.Application.Services;
+﻿using AirlineSystem.AirlineSystem.Application.Interfaces;
+using AirlineSystem.AirlineSystem.Application.Services;
 using AirlineSystem.AirlineSystem.Domain.Entities;
 using AirlineSystem.AirlineSystem.Domain.Enums;
 using AirlineSystem.AirlineSystem.Infrastructure.Persistence;
@@ -6,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirlineSystem.Application.Services
 {
-    internal class PaymentService
+    internal class PaymentService : IPaymentService
     {
         private AirlineDbContext DC = new AirlineDbContext();
         private AuthService AuthService = new AuthService();
@@ -41,7 +42,6 @@ namespace AirlineSystem.Application.Services
             var ticket = unpaid.FirstOrDefault(t => t.Id == ticketId);
             if (ticket == null) throw new Exception("Ticket not found or already paid.");
 
-            // ← CHECK USER BALANCE
             var user = DC.Users.Find(AuthService.LoggedInUser!.Id);
             if (user!.Balance < ticket.PriceAmount)
                 throw new Exception($"Insufficient funds. Your balance: {user.Balance} {user.Currency} | Price: {ticket.PriceAmount} {ticket.PriceCurrency}");
@@ -54,7 +54,6 @@ namespace AirlineSystem.Application.Services
             if (!Enum.IsDefined(typeof(PaymentMethod), method)) throw new Exception("Invalid payment method.");
             Console.ResetColor();
 
-            // ← DEDUCT FROM BALANCE
             user.Balance -= ticket.PriceAmount;
 
             var payment = new Payment
@@ -105,17 +104,24 @@ namespace AirlineSystem.Application.Services
             if (payment.Ticket.Flight?.Status == FlightStatus.Departed)
                 throw new Exception("Cannot refund a payment for a departed flight.");
 
-            // ← REFUND TO BALANCE
             var user = DC.Users.Find(AuthService.LoggedInUser!.Id);
             user!.Balance += payment.Amount;
 
             payment.Status = PaymentStatus.Refunded;
             payment.Notes = $"Refunded at {DateTime.UtcNow:g}";
+
+            if (!payment.Ticket.IsCanceled)
+            {
+                payment.Ticket.IsCanceled = true;
+                payment.Ticket.Flight!.AvailableSeats++;
+            }
+
             DC.SaveChanges();
 
             LogService.LogInfo($"Refund processed: {payment.TransactionId} | User: {user.Username} | New balance: {user.Balance}");
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"Refund processed. Amount: {payment.Amount} {payment.Currency}");
+            Console.WriteLine($"Ticket cancelled. Seat {payment.Ticket.SeatNumber} is now available.");
             Console.WriteLine($"New Balance: {user.Balance} {user.Currency}");
             Console.ResetColor();
         }

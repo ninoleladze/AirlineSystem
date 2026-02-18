@@ -8,5 +8,13 @@ namespace AirlineSystem.AirlineSystem.Application.Interfaces
 {
     internal interface IUserService
     {
+        public void GetAllUsers();
+        public void ViewMyProfile();
+        public void UpdateMyProfile();
+        public void ViewMyBalance();
+        public void AddMoney();
+        public void BanUser();
+
     }
+
 }

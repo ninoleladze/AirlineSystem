@@ -39,9 +39,9 @@ namespace AirlineSystem.AirlineSystem.Domain.Entities
 
         public List<FlightAssignment> FlightAssignments { get; set; } = new List<FlightAssignment>();
         public override string ToString() =>
-              $"[{Id}] {FlightNumber} | {DepartureAirport} -> {ArrivalAirport}" +
-              $" | {DepartureTime:g} | {BasePrice} {PriceCurrency} | Status: {Status} | Seats: {AvailableSeats}";
-
+           $"[{Id}] {FlightNumber} | {DepartureAirport} -> {ArrivalAirport}" +
+           $" | {DepartureTime:g} | PRICE: {BasePrice} {PriceCurrency}" +
+           $" | Status: {Status} | Seats: {AvailableSeats}";
 
 
 

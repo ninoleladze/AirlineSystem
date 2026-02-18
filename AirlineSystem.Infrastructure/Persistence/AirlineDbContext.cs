@@ -1,4 +1,5 @@
 ﻿using AirlineSystem.AirlineSystem.Domain.Entities;
+using AirlineSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;

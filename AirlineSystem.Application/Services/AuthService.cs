@@ -1,4 +1,5 @@
-﻿using AirlineSystem.AirlineSystem.Domain.Entities;
+﻿using AirlineSystem.AirlineSystem.Application.Interfaces;
+using AirlineSystem.AirlineSystem.Domain.Entities;
 using AirlineSystem.AirlineSystem.Domain.Events;
 using AirlineSystem.AirlineSystem.Domain.ValueObjects;
 using AirlineSystem.AirlineSystem.Infrastructure.Persistence;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AirlineSystem.AirlineSystem.Application.Services
 {
-    internal class AuthService
+    internal class AuthService : IAuthService
     {
         private AirlineDbContext DC = new AirlineDbContext();
         public static User? LoggedInUser { get; private set; }
@@ -77,6 +78,7 @@ namespace AirlineSystem.AirlineSystem.Application.Services
             Console.WriteLine("Email:");
             string email = Console.ReadLine()!;
 
+            Console.WriteLine("Password:");
             string password = Console.ReadLine()!;
             Console.ResetColor();
             string hashed = PasswordHash.Hash(password);

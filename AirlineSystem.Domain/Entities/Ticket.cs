@@ -31,9 +31,10 @@ namespace AirlineSystem.AirlineSystem.Domain.Entities
         public List<TicketPromotion> TicketPromotions { get; set; } = new();
 
 
-        public override string ToString() => $"[{Id}] Ref: {BookingReference} | Seat: {SeatNumber}" +
-            $"| {PassengerName} | {PriceAmount} {PriceCurrency} | Cancelled:" +
-            $"{IsCanceled}";
+        public override string ToString() =>
+        $"[{Id}] Ref: {BookingReference} | Seat: {SeatNumber}" +
+        $" | {PassengerName} | PRICE: {PriceAmount} {PriceCurrency}" +
+        $" | Cancelled: {IsCanceled}";
 
     }
 }

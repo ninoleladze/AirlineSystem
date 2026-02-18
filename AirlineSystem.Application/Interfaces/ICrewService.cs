@@ -8,5 +8,10 @@ namespace AirlineSystem.AirlineSystem.Application.Interfaces
 {
     internal interface ICrewService
     {
+        public void AddCrewMember();
+        public void AssignCrewToFlight();
+        public void RemoveCrewFromFlight();
+        public void GetAllCrewMembers();
+        public void ShowCrewForFlight(int flightId = 0);
     }
 }

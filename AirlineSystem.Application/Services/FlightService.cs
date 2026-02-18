@@ -1,4 +1,5 @@
-﻿using AirlineSystem.AirlineSystem.Application.Services;
+﻿using AirlineSystem.AirlineSystem.Application.Interfaces;
+using AirlineSystem.AirlineSystem.Application.Services;
 using AirlineSystem.AirlineSystem.Domain.Entities;
 using AirlineSystem.AirlineSystem.Domain.Enums;
 using AirlineSystem.AirlineSystem.Domain.Events;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirlineSystem.Application.Services
 {
-    internal class FlightService
+    internal class FlightService : IFlightService
     {
         private AirlineDbContext DC = new AirlineDbContext();
         private AuthService AuthService = new AuthService();
@@ -41,7 +42,6 @@ namespace AirlineSystem.Application.Services
                 throw new Exception("Invalid arrival time.");
             if (arrTime <= depTime) throw new Exception("Arrival must be after departure.");
 
-            // ← ADD THIS
             Console.WriteLine("Base Ticket Price:");
             if (!decimal.TryParse(Console.ReadLine(), out decimal price) || price <= 0)
                 throw new Exception("Invalid price.");
@@ -85,7 +85,15 @@ namespace AirlineSystem.Application.Services
             var flights = DC.Flights.Include(f => f.Aircraft).ToList();
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("=== All Flights ===");
-            foreach (var f in flights) Console.WriteLine(f);
+            Console.WriteLine(new string('-', 100));
+            foreach (var f in flights)
+            {
+                Console.WriteLine(f);
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"   Price: {f.BasePrice} {f.PriceCurrency} | Aircraft: {f.Aircraft.Model}");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+            }
+            Console.WriteLine(new string('-', 100));
             Console.ResetColor();
         }
 
