@@ -17,7 +17,6 @@ Features:
 - Search and filter capabilities (flights, crew, tickets)
 - Admin panel (revenue reports, role management, maintenance tracking)
 - File-based logging system
-- Comprehensive xUnit test suite
 
 Tech Stack:
 - .NET 8 / C#
