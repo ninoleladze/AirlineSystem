@@ -1,0 +1,148 @@
+﻿using AirlineSystem.AirlineSystem.Application.Interfaces;
+using AirlineSystem.AirlineSystem.Application.Services;
+using AirlineSystem.AirlineSystem.Domain.Entities;
+using AirlineSystem.AirlineSystem.Domain.Enums;
+using AirlineSystem.AirlineSystem.Domain.Events;
+using AirlineSystem.AirlineSystem.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+namespace AirlineSystem.Application.Services
+{
+    internal class BookingService : IBookingService
+    {
+        private AirlineDbContext DC = new AirlineDbContext();
+        private AuthService AuthService = new AuthService();
+        private FlightService FlightService = new FlightService();
+
+        public void BookTicket()
+        {
+            AuthService.CheckLoggedIn();
+            FlightService.GetAllFlights();
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine("=== Book Ticket ===");
+            Console.WriteLine("Enter flight ID:");
+            int flightId = int.Parse(Console.ReadLine()!);
+            var flight = DC.Flights.Find(flightId);
+            if (flight == null) throw new Exception("Flight not found.");
+            if (flight.Status != FlightStatus.Scheduled && flight.Status != FlightStatus.Boarding)
+                throw new Exception("Booking not available for this flight status.");
+            if (flight.AvailableSeats <= 0) throw new Exception("No seats available on this flight.");
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"╔═══════════════════════════════════════════╗");
+            Console.WriteLine($"║  TICKET PRICE: {flight.BasePrice} {flight.PriceCurrency,-27}║");
+            Console.WriteLine($"╚═══════════════════════════════════════════╝");
+            Console.ForegroundColor = ConsoleColor.Magenta;
+
+            Console.WriteLine("Passenger Name:");
+            string passengerName = Console.ReadLine()!;
+            if (string.IsNullOrWhiteSpace(passengerName)) throw new Exception("Passenger name cannot be empty.");
+
+            Console.WriteLine("Seat Number (e.g. 12A):");
+            string seatNumber = Console.ReadLine()!;
+            if (string.IsNullOrWhiteSpace(seatNumber)) throw new Exception("Seat number cannot be empty.");
+            if (DC.Tickets.Any(t => t.FlightId == flightId && t.SeatNumber == seatNumber && !t.IsCanceled))
+                throw new Exception($"Seat {seatNumber} is already taken.");
+            Console.ResetColor();
+
+            string bookingRef = $"BK-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString()[..6].ToUpper()}";
+
+            var ticket = new Ticket
+            {
+                BookingReference = bookingRef,
+                SeatNumber = seatNumber,
+                PassengerName = passengerName,
+                FlightId = flightId,
+                UserId = AuthService.LoggedInUser!.Id,
+                PriceAmount = flight.BasePrice,      
+                PriceCurrency = flight.PriceCurrency
+            };
+            flight.AvailableSeats--;
+            DC.Tickets.Add(ticket);
+
+            try
+            {
+                DC.SaveChanges();
+                var evt = new TicketBookedEvent(ticket.Id, flightId, passengerName);
+                LogService.LogInfo($"Ticket booked: {bookingRef} | Flight: {flightId} | Price: {ticket.PriceAmount}");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"╔═══════════════════════════════════════════════════════╗");
+                Console.WriteLine($"║  TICKET BOOKED SUCCESSFULLY!                        ║");
+                Console.WriteLine($"║  Reference: {bookingRef,-38}║");
+                Console.WriteLine($"║  Seat: {seatNumber,-45}║");
+                Console.WriteLine($"║  Price: {ticket.PriceAmount} {ticket.PriceCurrency,-40}║");
+                Console.WriteLine($"╚═══════════════════════════════════════════════════════╝");
+                Console.ResetColor();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                throw new Exception("Booking conflict detected. Please try again.");
+            }
+        }
+
+        public void CancelTicket()
+        {
+            AuthService.CheckLoggedIn();
+            ShowMyTickets();
+            Console.WriteLine("Enter ticket ID to cancel:");
+            int ticketId = int.Parse(Console.ReadLine()!);
+            var ticket = DC.Tickets.Include(t => t.Flight).FirstOrDefault(t => t.Id == ticketId);
+            if (ticket == null) throw new Exception("Ticket not found.");
+            if (ticket.UserId != AuthService.LoggedInUser!.Id) throw new Exception("You can only cancel your own tickets.");
+            if (ticket.IsCanceled) throw new Exception("Ticket is already cancelled.");
+            if (ticket.Flight.Status == FlightStatus.Departed ||
+                ticket.Flight.Status == FlightStatus.Arrived)
+                throw new Exception("Cannot cancel a ticket for a departed or arrived flight.");
+
+            bool hasPaidPayment = DC.Payments.Any(p => p.TicketId == ticket.Id && p.Status == PaymentStatus.Completed);
+            if (hasPaidPayment) throw new Exception("This ticket has a completed payment. Please request a refund instead.");
+
+            ticket.IsCanceled = true;
+            ticket.Flight.AvailableSeats++;
+            DC.SaveChanges();
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("Ticket cancelled successfully.");
+            Console.ResetColor();
+        }
+
+        public void ShowMyTickets()
+        {
+            AuthService.CheckLoggedIn();
+            var tickets = DC.Tickets.Include(t => t.Flight)
+                .Where(t => t.UserId == AuthService.LoggedInUser!.Id).ToList();
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("=== My Tickets ===");
+            if (tickets.Count == 0)
+            {
+                Console.WriteLine("You have no tickets.");
+                Console.ResetColor();
+                return;
+            }
+            Console.WriteLine(new string('-', 100));
+            foreach (var t in tickets)
+            {
+                Console.WriteLine(t);
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"   Flight: {t.Flight?.FlightNumber} | {t.Flight?.DepartureAirport} → {t.Flight?.ArrivalAirport}");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+            }
+            Console.WriteLine(new string('-', 100));
+            Console.ResetColor();
+        }
+
+        public void SearchByReference()
+        {
+            AuthService.CheckLoggedIn();
+            Console.WriteLine("Enter booking reference:");
+            string reference = Console.ReadLine()!;
+            var ticket = DC.Tickets.Include(t => t.Flight).Include(t => t.User)
+                .FirstOrDefault(t => t.BookingReference == reference);
+            if (ticket == null) throw new Exception("Ticket not found.");
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("=== Ticket Details ===");
+            Console.WriteLine(ticket);
+            Console.WriteLine($"Flight: {ticket.Flight}");
+            Console.ResetColor();
+        }
+    }
+}
